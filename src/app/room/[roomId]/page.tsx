@@ -74,12 +74,6 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   const [isWinner, setIsWinner] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading, router]);
-
-  useEffect(() => {
     const roomRef = doc(db, 'rooms', roomId);
     const unsubscribeRoom = onSnapshot(roomRef, (doc) => {
       if (doc.exists()) {

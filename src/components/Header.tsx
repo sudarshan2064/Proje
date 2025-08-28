@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,10 +16,6 @@ import { Gamepad2, LogOut } from "lucide-react";
 
 export function Header() {
   const { user } = useAuth();
-
-  const handleSignOut = async () => {
-    await signOut(auth);
-  };
   
   const getInitials = (name?: string | null) => {
     if (!name) return 'U';
@@ -55,13 +49,14 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
+                  <DropdownMenuItem onClick={() => alert("Sign out is disabled.")}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
+              // This part is effectively dead code now but kept for easy re-enabling
               <Button asChild>
                 <Link href="/login">Sign In</Link>
               </Button>

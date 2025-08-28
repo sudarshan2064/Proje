@@ -52,12 +52,6 @@ export default function LobbyPage() {
   });
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
     const q = query(collection(db, "rooms"), where("status", "==", "waiting"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
