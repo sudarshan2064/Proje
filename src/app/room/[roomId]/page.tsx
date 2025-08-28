@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -16,20 +17,44 @@ import { Loader2, Crown, Trophy, Sparkles } from 'lucide-react';
 import { startGame, submitAnswer, nextQuestion } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { adjustDifficulty } from '@/ai/flows/adjust-difficulty';
-import Confetti from 'react-dom-confetti';
 
-const confettiConfig = {
-  angle: 90,
-  spread: 360,
-  startVelocity: 40,
-  elementCount: 70,
-  dragFriction: 0.12,
-  duration: 3000,
-  stagger: 3,
-  width: "10px",
-  height: "10px",
-  colors: ["#a864fd", "#29cdff", "#78ff44", "#ff718d", "#fdff6a"]
+const WinnerCelebration = () => {
+  const [sparks, setSparks] = useState<{ id: number; x: number; y: number; delay: number; duration: number; size: number }[]>([]);
+
+  useEffect(() => {
+    const newSparks = Array.from({ length: 30 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      delay: Math.random() * 1,
+      duration: Math.random() * 2 + 1, // duration between 1 and 3 seconds
+      size: Math.random() * 16 + 16 // size between 16 and 32
+    }));
+    setSparks(newSparks);
+  }, []);
+
+  if (sparks.length === 0) return null;
+
+  return (
+    <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+      {sparks.map(spark => (
+        <Sparkles
+          key={spark.id}
+          className="absolute text-yellow-400 animate-fade-out-up"
+          style={{
+            left: `${spark.x}%`,
+            top: `${spark.y}%`,
+            width: `${spark.size}px`,
+            height: `${spark.size}px`,
+            animationDelay: `${spark.delay}s`,
+            animationDuration: `${spark.duration}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
 };
+
 
 export default function RoomPage({ params }: { params: { roomId: string } }) {
   const { user, loading: authLoading } = useAuth();
@@ -224,9 +249,9 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   if (room.status === 'finished') {
     return (
       <div className="max-w-4xl mx-auto text-center">
-        <div className="relative inline-block">
-            <Trophy className="w-24 h-24 text-yellow-400" />
-            <Confetti active={isWinner} config={confettiConfig} />
+        <div className="relative inline-block my-4">
+          {isWinner && <WinnerCelebration />}
+          <Trophy className="w-24 h-24 text-yellow-400 drop-shadow-lg" />
         </div>
         <h1 className="text-4xl font-bold mt-4">Game Over!</h1>
         <p className="text-xl text-muted-foreground mt-2">

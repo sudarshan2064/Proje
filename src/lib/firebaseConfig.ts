@@ -1,11 +1,13 @@
 // IMPORTANT: Replace this with your own Firebase project configuration.
 // You can find this in your Firebase project settings.
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  databaseURL: "YOUR_DATABASE_URL", // For Realtime Database
+  apiKey: "your-api-key",
+  authDomain: "your-project-id.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project-id.appspot.com",
+  messagingSenderId: "your-messaging-sender-id",
+  appId: "your-app-id",
+  // IMPORTANT: The databaseURL is required for Firebase Realtime Database.
+  // It's usually in the format: https://<your-project-id>-default-rtdb.firebaseio.com
+  databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
 };

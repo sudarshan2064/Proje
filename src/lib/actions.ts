@@ -1,3 +1,4 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -16,7 +17,7 @@ import {
   writeBatch,
   limit
 } from "firebase/firestore";
-import { ref, set } from "firebase/database";
+import { ref, set, runTransaction } from "firebase/database";
 import { Player, Room, UserProfile, Question } from "@/types";
 
 export async function createRoom(roomName: string, user: UserProfile): Promise<string> {
@@ -40,6 +41,7 @@ export async function createRoom(roomName: string, user: UserProfile): Promise<s
   });
 
   await set(ref(rtdb, `scores/${roomRef.id}/${user.uid}`), {
+    uid: player.uid,
     name: player.name,
     photoURL: player.photoURL,
     score: 0,
@@ -84,6 +86,7 @@ export async function joinRoom(roomId: string, user: UserProfile) {
   });
 
   await set(ref(rtdb, `scores/${roomId}/${user.uid}`), {
+    uid: player.uid,
     name: player.name,
     photoURL: player.photoURL,
     score: 0,
@@ -102,8 +105,8 @@ export async function startGame(roomId: string, userId: string) {
     throw new Error("Not enough players to start the game.");
   }
 
-  // Fetch 5 random questions
-  const questionsQuery = query(collection(db, "questions"), limit(5));
+  // Fetch 10 random questions. In a real app, you might want more sophisticated random selection.
+  const questionsQuery = query(collection(db, "questions"), limit(10));
   const questionsSnap = await getDocs(questionsQuery);
   const questionIds = questionsSnap.docs.map(doc => doc.id);
 
@@ -133,18 +136,18 @@ export async function submitAnswer(roomId: string, userId: string, questionId: s
   const question = questionSnap.data() as Question;
   const isCorrect = question.correctAnswer === answerIndex;
   
-  const scoreRef = ref(rtdb, `scores/${roomId}/${userId}/score`);
-  const currentScoreSnap = await getDoc(roomRef); // Not ideal, but RTDB get is complex on server
-  const currentPlayer = currentScoreSnap.data()?.players.find((p: Player) => p.uid === userId);
-  const currentScore = currentPlayer?.score || 0;
-
-  if(isCorrect) {
-    await set(scoreRef, currentScore + 10);
+  if (isCorrect) {
+    const scoreRef = ref(rtdb, `scores/${roomId}/${userId}/score`);
+    await runTransaction(scoreRef, (currentScore) => {
+      // Increment score by 10, initializing to 10 if it's null
+      return (currentScore || 0) + 10;
+    });
   }
 
   const answer = {
     userId,
     isCorrect,
+    answerIndex,
     timestamp: serverTimestamp(),
   };
 
@@ -165,8 +168,10 @@ export async function nextQuestion(roomId: string, hostId: string) {
   const newIndex = room.currentQuestionIndex + 1;
 
   if (newIndex >= room.questionIds.length) {
+    // All questions answered, finish the game
     await updateDoc(roomRef, { status: "finished" });
   } else {
+    // Move to the next question
     await updateDoc(roomRef, { currentQuestionIndex: newIndex });
   }
   revalidatePath(`/room/${roomId}`);

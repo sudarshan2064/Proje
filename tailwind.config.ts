@@ -88,10 +88,21 @@ export default {
             height: '0',
           },
         },
+        'fade-out-up': {
+          '0%': {
+            opacity: '1',
+            transform: 'translateY(0) scale(1)',
+          },
+          '100%': {
+            opacity: '0',
+            transform: 'translateY(-80px) scale(0.5)',
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-out-up': 'fade-out-up ease-out forwards',
       },
     },
   },

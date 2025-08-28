@@ -1,3 +1,4 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export interface UserProfile {
@@ -26,6 +27,7 @@ export interface Room {
   createdAt: Timestamp;
   currentQuestionIndex: number;
   questionIds: string[];
+  answers?: Record<string, Record<string, Answer>>;
 }
 
 export interface Question {
@@ -40,4 +42,5 @@ export interface Answer {
   userId: string;
   isCorrect: boolean;
   timestamp: Timestamp;
+  answerIndex: number;
 }
