@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { nanoid } from 'nanoid';
 
 export default function Home() {
@@ -32,36 +38,34 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
       <div className="text-center mb-12">
         <h1 className="text-6xl font-bold tracking-tighter text-primary">2D Shooter</h1>
-        <p className="text-xl text-muted-foreground mt-2">Create, join, or play against bots</p>
+        <p className="text-xl text-muted-foreground mt-2">An online multiplayer shooter</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-8">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle className="text-center">Create a New Room</CardTitle>
-          </CardHeader>
-          <CardContent>
+
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button size="lg" className="text-2xl h-16 px-12">Start Game</Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl">Game Mode</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
             <Button onClick={handleCreateRoom} className="w-full" size="lg">
               Create Room
             </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle className="text-center">Play with Bots</CardTitle>
-          </CardHeader>
-          <CardContent>
             <Button onClick={handlePlayWithBots} className="w-full" size="lg" variant="secondary">
-              Start
+              Play with Bots
             </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle className="text-center">Join an Existing Room</CardTitle>
-          </CardHeader>
-          <CardContent>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or
+                </span>
+              </div>
+            </div>
             <form onSubmit={handleJoinRoom} className="flex flex-col gap-4">
               <Input
                 type="text"
@@ -75,9 +79,9 @@ export default function Home() {
                 Join Room
               </Button>
             </form>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
