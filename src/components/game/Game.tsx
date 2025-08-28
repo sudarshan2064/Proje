@@ -71,7 +71,8 @@ export function Game() {
           lastShot: 0,
           isDead: false,
         };
-        await setDoc(roomRef, { players: { [localPlayerId]: newPlayer }, bullets: [] }, { merge: true });
+        // Use set with merge to avoid race conditions and offline errors
+        await setDoc(roomRef, { players: { [localPlayerId]: newPlayer } }, { merge: true });
       }
     };
 
@@ -79,7 +80,12 @@ export function Game() {
 
     const unsubscribe = onSnapshot(doc(db, 'rooms', roomId as string), (doc) => {
       if (doc.exists()) {
-        setGameState(doc.data() as GameState);
+        const data = doc.data() as GameState;
+        // Ensure bullets is always an array
+        if (!data.bullets) {
+          data.bullets = [];
+        }
+        setGameState(data);
       }
     });
 
@@ -145,12 +151,16 @@ export function Game() {
         }
         
         if (playerMoved) {
-          await updateDoc(doc(db, 'rooms', roomId as string), { [`players.${playerId}`]: player });
+          // We only update the position, not the whole player object
+          await updateDoc(doc(db, 'rooms', roomId as string), { 
+            [`players.${playerId}.x`]: player.x,
+            [`players.${playerId}.y`]: player.y 
+          });
         }
         
         // Player shooting
         if (keysPressed.current['mouse0'] && !player.isDead && Date.now() - player.lastShot > 200) {
-          player.lastShot = Date.now();
+          const newLastShot = Date.now();
           const angle = Math.atan2(mousePosition.current.y - (player.y + PLAYER_SIZE / 2), mousePosition.current.x - (player.x + PLAYER_SIZE / 2));
           const newBullet: BulletState = {
             id: `b_${nanoid(6)}`,
@@ -160,7 +170,18 @@ export function Game() {
             dy: Math.sin(angle) * BULLET_SPEED,
             playerId: playerId,
           };
-          await updateDoc(doc(db, 'rooms', roomId as string), { bullets: arrayUnion(newBullet), [`players.${playerId}.lastShot`]: player.lastShot });
+          // Update lastShot locally immediately to prevent rapid firing
+          setGameState(prev => ({
+              ...prev,
+              players: {
+                  ...prev.players,
+                  [playerId]: {
+                      ...prev.players[playerId],
+                      lastShot: newLastShot,
+                  }
+              }
+          }));
+          await updateDoc(doc(db, 'rooms', roomId as string), { bullets: arrayUnion(newBullet), [`players.${playerId}.lastShot`]: newLastShot });
         }
       }
 
@@ -169,10 +190,10 @@ export function Game() {
       const players = Object.values(gameState.players).sort((a,b) => a.id.localeCompare(b.id));
       if (players.length > 0 && players[0].id === playerId) {
         let newBullets = gameState.bullets ? [...gameState.bullets] : [];
-        let newPlayers = { ...gameState.players };
         const bulletsToRemove: string[] = [];
         const batch = writeBatch(db);
         const roomRef = doc(db, 'rooms', roomId as string);
+        let hasUpdates = false;
 
         // Update bullets
         newBullets = newBullets.map(b => ({
@@ -188,15 +209,16 @@ export function Game() {
                 continue;
             }
 
-            for (const p of Object.values(newPlayers)) {
+            for (const p of Object.values(gameState.players)) {
                 if (p.id !== bullet.playerId && !p.isDead) {
                     const distance = Math.sqrt((bullet.x - (p.x + PLAYER_SIZE/2))**2 + (bullet.y - (p.y + PLAYER_SIZE/2))**2);
                     if (distance < PLAYER_SIZE/2) {
                         bulletsToRemove.push(bullet.id);
                         const newHealth = Math.max(0, p.health - 25);
                         batch.update(roomRef, {[`players.${p.id}.health`]: newHealth});
+                        hasUpdates = true;
 
-                        if (newHealth <= 0) {
+                        if (newHealth <= 0 && !p.isDead) {
                             batch.update(roomRef, {
                                 [`players.${p.id}.deaths`]: increment(1),
                                 [`players.${p.id}.isDead`]: true,
@@ -225,9 +247,12 @@ export function Game() {
         }
         
         const finalBullets = newBullets.filter(b => !bulletsToRemove.includes(b.id));
-        batch.update(roomRef, { bullets: finalBullets });
+        if (finalBullets.length !== (gameState.bullets?.length || 0)) {
+           batch.update(roomRef, { bullets: finalBullets });
+           hasUpdates = true;
+        }
 
-        if (batch.length > 0) {
+        if (hasUpdates) {
             await batch.commit();
         }
       }
@@ -259,3 +284,5 @@ export function Game() {
     </div>
   );
 }
+
+    
