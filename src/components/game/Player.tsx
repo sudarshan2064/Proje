@@ -7,12 +7,13 @@ interface PlayerProps {
         y: number;
         health: number;
         isDead: boolean;
+        isBot: boolean;
     };
     isLocalPlayer: boolean;
 }
 
 export function Player({ player, isLocalPlayer }: PlayerProps) {
-  const color = isLocalPlayer ? '#3b82f6' : '#ef4444'; // blue-500 and red-500
+  const color = isLocalPlayer ? '#3b82f6' : (player.isBot ? '#f97316' : '#ef4444'); // blue-500, orange-500 for bots, red-500 for other players
 
   if (player.isDead) {
       return null;
@@ -44,7 +45,7 @@ export function Player({ player, isLocalPlayer }: PlayerProps) {
       </svg>
       <div className="relative w-full h-full -mt-10">
         <div className="absolute -top-6 w-full text-center text-white text-xs font-bold">
-          Player {player.id.substring(0, 4)}
+          {player.isBot ? `Bot ${player.id.substring(0, 4)}` : `Player ${player.id.substring(0, 4)}`}
         </div>
         <div className="absolute -bottom-5 w-full h-2 bg-gray-300 rounded overflow-hidden">
             <div className="h-full bg-green-500" style={{ width: `${player.health}%`}}></div>

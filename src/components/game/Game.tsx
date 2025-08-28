@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { doc, onSnapshot, setDoc, updateDoc, arrayUnion, writeBatch, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Player } from './Player';
@@ -15,6 +15,7 @@ const PLAYER_SPEED = 5;
 const BULLET_SPEED = 10;
 const MAX_HEALTH = 100;
 const RESPAWN_TIME = 3000;
+const BOT_COUNT = 3;
 
 interface PlayerState {
   id: string;
@@ -25,6 +26,9 @@ interface PlayerState {
   deaths: number;
   lastShot: number;
   isDead: boolean;
+  isBot: boolean;
+  targetX?: number;
+  targetY?: number;
 }
 
 interface BulletState {
@@ -43,6 +47,9 @@ interface GameState {
 
 export function Game() {
   const { roomId } = useParams();
+  const searchParams = useSearchParams();
+  const isBotGame = searchParams.get('bots') === 'true';
+
   const [gameState, setGameState] = useState<GameState>({ players: {}, bullets: [] });
   const [playerId, setPlayerId] = useState<string | null>(null);
   const gameLoopRef = useRef<number>();
@@ -69,11 +76,32 @@ export function Game() {
         deaths: 0,
         lastShot: 0,
         isDead: false,
+        isBot: false,
       };
 
-      // This will create the player if they don't exist, or update their state if they do.
-      // It avoids reading the document first, which caused the offline error.
       await setDoc(roomRef, { players: { [localPlayerId]: newPlayer } }, { merge: true });
+
+      if (isBotGame) {
+        const batch = writeBatch(db);
+        for (let i = 0; i < BOT_COUNT; i++) {
+          const botId = `b_${nanoid(4)}`;
+          const newBot: PlayerState = {
+            id: botId,
+            x: Math.random() * (GAME_WIDTH - PLAYER_SIZE),
+            y: Math.random() * (GAME_HEIGHT - PLAYER_SIZE),
+            health: MAX_HEALTH,
+            kills: 0,
+            deaths: 0,
+            lastShot: 0,
+            isDead: false,
+            isBot: true,
+            targetX: Math.random() * (GAME_WIDTH - PLAYER_SIZE),
+            targetY: Math.random() * (GAME_HEIGHT - PLAYER_SIZE),
+          };
+          batch.set(roomRef, { players: { [botId]: newBot } }, { merge: true });
+        }
+        await batch.commit();
+      }
     };
 
     initPlayer();
@@ -81,7 +109,6 @@ export function Game() {
     const unsubscribe = onSnapshot(doc(db, 'rooms', roomId as string), (doc) => {
       if (doc.exists()) {
         const data = doc.data() as GameState;
-        // Ensure bullets is always an array
         if (!data.bullets) {
           data.bullets = [];
         }
@@ -90,7 +117,7 @@ export function Game() {
     });
 
     return () => unsubscribe();
-  }, [roomId]);
+  }, [roomId, isBotGame]);
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -130,7 +157,6 @@ export function Game() {
         const player = { ...gameState.players[playerId] };
         let playerMoved = false;
 
-        // Player movement
         if (!player.isDead) {
             if (keysPressed.current['w'] || keysPressed.current['arrowup']) {
                 player.y = Math.max(0, player.y - PLAYER_SPEED);
@@ -151,14 +177,12 @@ export function Game() {
         }
         
         if (playerMoved) {
-          // We only update the position, not the whole player object
           await updateDoc(doc(db, 'rooms', roomId as string), { 
             [`players.${playerId}.x`]: player.x,
             [`players.${playerId}.y`]: player.y 
           });
         }
         
-        // Player shooting
         if (keysPressed.current['mouse0'] && !player.isDead && Date.now() - player.lastShot > 200) {
           const newLastShot = Date.now();
           const angle = Math.atan2(mousePosition.current.y - (player.y + PLAYER_SIZE / 2), mousePosition.current.x - (player.x + PLAYER_SIZE / 2));
@@ -170,39 +194,76 @@ export function Game() {
             dy: Math.sin(angle) * BULLET_SPEED,
             playerId: playerId,
           };
-          // Update lastShot locally immediately to prevent rapid firing
           setGameState(prev => ({
               ...prev,
-              players: {
-                  ...prev.players,
-                  [playerId]: {
-                      ...prev.players[playerId],
-                      lastShot: newLastShot,
-                  }
-              }
+              players: { ...prev.players, [playerId]: { ...prev.players[playerId], lastShot: newLastShot, } }
           }));
           await updateDoc(doc(db, 'rooms', roomId as string), { bullets: arrayUnion(newBullet), [`players.${playerId}.lastShot`]: newLastShot });
         }
       }
 
-      // This part should only be run by one client, ideally a host or server
-      // For simplicity in this example, we'll let the first player who joined be the "host"
       const players = Object.values(gameState.players).sort((a,b) => a.id.localeCompare(b.id));
       if (players.length > 0 && players[0].id === playerId) {
-        let newBullets = gameState.bullets ? [...gameState.bullets] : [];
-        const bulletsToRemove: string[] = [];
         const batch = writeBatch(db);
         const roomRef = doc(db, 'rooms', roomId as string);
-        let hasUpdates = false;
+        let hasHostUpdates = false;
 
-        // Update bullets
-        newBullets = newBullets.map(b => ({
-            ...b,
-            x: b.x + b.dx,
-            y: b.y + b.dy
-        }));
+        // --- Host-controlled logic (Bots & Bullets) ---
 
-        // Check for bullet collisions
+        // Bot AI
+        if (isBotGame) {
+          const humanPlayer = gameState.players[playerId];
+          Object.values(gameState.players).forEach(p => {
+            if (p.isBot && !p.isDead && humanPlayer) {
+              const botSpeed = PLAYER_SPEED * 0.5; // Slower bots
+              
+              // Move towards target
+              const targetX = p.targetX ?? p.x;
+              const targetY = p.targetY ?? p.y;
+              let newBotX = p.x;
+              let newBotY = p.y;
+              const dx = targetX - p.x;
+              const dy = targetY - p.y;
+              const dist = Math.sqrt(dx*dx + dy*dy);
+              
+              if (dist > 10) {
+                newBotX += (dx / dist) * botSpeed;
+                newBotY += (dy / dist) * botSpeed;
+              } else {
+                // New target
+                batch.update(roomRef, { 
+                  [`players.${p.id}.targetX`]: Math.random() * (GAME_WIDTH - PLAYER_SIZE),
+                  [`players.${p.id}.targetY`]: Math.random() * (GAME_HEIGHT - PLAYER_SIZE)
+                });
+              }
+
+              batch.update(roomRef, { [`players.${p.id}.x`]: newBotX, [`players.${p.id}.y`]: newBotY });
+              hasHostUpdates = true;
+
+              // Bot shooting
+              if (Date.now() - p.lastShot > 1000) { // Slower fire rate
+                const angle = Math.atan2((humanPlayer.y + PLAYER_SIZE/2) - (p.y + PLAYER_SIZE/2), (humanPlayer.x + PLAYER_SIZE/2) - (p.x + PLAYER_SIZE/2));
+                const newBullet: BulletState = {
+                  id: `b_${nanoid(6)}`,
+                  x: p.x + PLAYER_SIZE / 2,
+                  y: p.y + PLAYER_SIZE / 2,
+                  dx: Math.cos(angle) * BULLET_SPEED,
+                  dy: Math.sin(angle) * BULLET_SPEED,
+                  playerId: p.id,
+                };
+                batch.update(roomRef, { bullets: arrayUnion(newBullet), [`players.${p.id}.lastShot`]: Date.now() });
+                hasHostUpdates = true;
+              }
+            }
+          });
+        }
+        
+        // Bullet movement and collision
+        let newBullets = gameState.bullets ? [...gameState.bullets] : [];
+        const bulletsToRemove: string[] = [];
+        
+        newBullets = newBullets.map(b => ({ ...b, x: b.x + b.dx, y: b.y + b.dy }));
+
         for (const bullet of newBullets) {
             if (bullet.x < 0 || bullet.x > GAME_WIDTH || bullet.y < 0 || bullet.y > GAME_HEIGHT) {
                 bulletsToRemove.push(bullet.id);
@@ -216,14 +277,16 @@ export function Game() {
                         bulletsToRemove.push(bullet.id);
                         const newHealth = Math.max(0, p.health - 25);
                         batch.update(roomRef, {[`players.${p.id}.health`]: newHealth});
-                        hasUpdates = true;
+                        hasHostUpdates = true;
 
                         if (newHealth <= 0 && !p.isDead) {
                             batch.update(roomRef, {
                                 [`players.${p.id}.deaths`]: increment(1),
                                 [`players.${p.id}.isDead`]: true,
-                                [`players.${bullet.playerId}.kills`]: increment(1),
                             });
+                             if (gameState.players[bullet.playerId]) {
+                                batch.update(roomRef, {[`players.${bullet.playerId}.kills`]: increment(1)});
+                            }
                             
                             setTimeout(() => {
                                 const respawnedPlayer = {
@@ -247,12 +310,12 @@ export function Game() {
         }
         
         const finalBullets = newBullets.filter(b => !bulletsToRemove.includes(b.id));
-        if (finalBullets.length !== (gameState.bullets?.length || 0) || newBullets.some(b => b.x !== gameState.bullets.find(gb => gb.id === b.id)?.x) || bulletsToRemove.length > 0) {
+        if (finalBullets.length !== (gameState.bullets?.length || 0) || bulletsToRemove.length > 0) {
            batch.update(roomRef, { bullets: finalBullets });
-           hasUpdates = true;
+           hasHostUpdates = true;
         }
 
-        if (hasUpdates) {
+        if (hasHostUpdates) {
             await batch.commit();
         }
       }
@@ -274,7 +337,7 @@ export function Game() {
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [playerId, gameState, roomId]);
+  }, [playerId, gameState, roomId, isBotGame]);
 
 
   return (
@@ -284,5 +347,3 @@ export function Game() {
     </div>
   );
 }
-
-    
