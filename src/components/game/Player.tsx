@@ -12,7 +12,7 @@ interface PlayerProps {
 }
 
 export function Player({ player, isLocalPlayer }: PlayerProps) {
-  const color = isLocalPlayer ? 'bg-blue-500' : 'bg-red-500';
+  const color = isLocalPlayer ? '#3b82f6' : '#ef4444'; // blue-500 and red-500
 
   if (player.isDead) {
       return null;
@@ -20,14 +20,29 @@ export function Player({ player, isLocalPlayer }: PlayerProps) {
 
   return (
     <div
-      className={`absolute w-10 h-10 rounded-full ${color} border-2 border-white`}
+      className="absolute"
       style={{
         left: player.x,
         top: player.y,
+        width: 40,
+        height: 40,
         transition: 'left 0.05s linear, top 0.05s linear',
       }}
     >
-      <div className="relative w-full h-full">
+      <svg width="40" height="40" viewBox="0 0 40 40" className="overflow-visible">
+        <g stroke={color} strokeWidth="3" fill="none">
+          {/* Head */}
+          <circle cx="20" cy="7" r="5" fill={color} />
+          {/* Body */}
+          <line x1="20" y1="12" x2="20" y2="24" />
+          {/* Arms */}
+          <line x1="10" y1="18" x2="30" y2="18" />
+          {/* Legs */}
+          <line x1="20" y1="24" x2="12" y2="34" />
+          <line x1="20" y1="24" x2="28" y2="34" />
+        </g>
+      </svg>
+      <div className="relative w-full h-full -mt-10">
         <div className="absolute -top-6 w-full text-center text-white text-xs font-bold">
           Player {player.id.substring(0, 4)}
         </div>
