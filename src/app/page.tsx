@@ -16,6 +16,11 @@ export default function Home() {
     router.push(`/rooms/${newRoomCode}`);
   };
 
+  const handlePlayWithBots = () => {
+    const newRoomCode = nanoid(6);
+    router.push(`/rooms/${newRoomCode}?bots=true`);
+  };
+
   const handleJoinRoom = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (roomCode.trim()) {
@@ -27,9 +32,9 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
       <div className="text-center mb-12">
         <h1 className="text-6xl font-bold tracking-tighter text-primary">2D Shooter</h1>
-        <p className="text-xl text-muted-foreground mt-2">Create or join a game room</p>
+        <p className="text-xl text-muted-foreground mt-2">Create, join, or play against bots</p>
       </div>
-      <div className="flex flex-col md:flex-row items-center gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-8">
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle className="text-center">Create a New Room</CardTitle>
@@ -41,7 +46,16 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <div className="text-center font-bold text-muted-foreground">OR</div>
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-center">Play with Bots</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handlePlayWithBots} className="w-full" size="lg" variant="secondary">
+              Start
+            </Button>
+          </CardContent>
+        </Card>
 
         <Card className="w-full max-w-sm">
           <CardHeader>

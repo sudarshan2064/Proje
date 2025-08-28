@@ -1,16 +1,19 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 export default function RoomPage() {
   const { roomId } = useParams();
+  const searchParams = useSearchParams();
+  const isBotGame = searchParams.get('bots') === 'true';
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <header className="flex justify-between items-center p-4 border-b">
         <h1 className="text-2xl font-bold">Room: <span className="text-primary uppercase">{roomId}</span></h1>
+        {isBotGame && <p className="text-lg font-semibold text-secondary-foreground">Playing with bots</p>}
         <div className="flex items-center gap-4">
           <div className="w-48">
             <p className="text-sm text-muted-foreground mb-1">Health</p>
