@@ -247,7 +247,7 @@ export function Game() {
         }
         
         const finalBullets = newBullets.filter(b => !bulletsToRemove.includes(b.id));
-        if (finalBullets.length !== (gameState.bullets?.length || 0) || bulletsToRemove.length > 0) {
+        if (finalBullets.length !== (gameState.bullets?.length || 0) || newBullets.some(b => b.x !== gameState.bullets.find(gb => gb.id === b.id)?.x) || bulletsToRemove.length > 0) {
            batch.update(roomRef, { bullets: finalBullets });
            hasUpdates = true;
         }
@@ -284,3 +284,5 @@ export function Game() {
     </div>
   );
 }
+
+    
