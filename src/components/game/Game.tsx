@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, onSnapshot, setDoc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc, updateDoc, arrayUnion, writeBatch, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Player } from './Player';
 import { Bullet } from './Bullet';
@@ -14,6 +14,7 @@ const PLAYER_SIZE = 40;
 const PLAYER_SPEED = 5;
 const BULLET_SPEED = 10;
 const MAX_HEALTH = 100;
+const RESPAWN_TIME = 3000;
 
 interface PlayerState {
   id: string;
@@ -23,6 +24,7 @@ interface PlayerState {
   kills: number;
   deaths: number;
   lastShot: number;
+  isDead: boolean;
 }
 
 interface BulletState {
@@ -55,6 +57,7 @@ export function Game() {
     setPlayerId(localPlayerId);
     
     const initPlayer = async () => {
+      if (!roomId) return;
       const roomRef = doc(db, 'rooms', roomId as string);
       const roomSnap = await getDoc(roomRef);
       if (!roomSnap.exists() || !roomSnap.data().players?.[localPlayerId]) {
@@ -65,7 +68,8 @@ export function Game() {
           health: MAX_HEALTH,
           kills: 0,
           deaths: 0,
-          lastShot: 0
+          lastShot: 0,
+          isDead: false,
         };
         await setDoc(roomRef, { players: { [localPlayerId]: newPlayer }, bullets: [] }, { merge: true });
       }
@@ -115,33 +119,37 @@ export function Game() {
         gameEl.addEventListener('mouseup', handleMouseUp);
     }
 
-    const gameLoop = () => {
+    const gameLoop = async () => {
       if (playerId && gameState.players[playerId]) {
         const player = { ...gameState.players[playerId] };
         let playerMoved = false;
 
-        if (keysPressed.current['w'] || keysPressed.current['arrowup']) {
-          player.y = Math.max(0, player.y - PLAYER_SPEED);
-          playerMoved = true;
-        }
-        if (keysPressed.current['s'] || keysPressed.current['arrowdown']) {
-          player.y = Math.min(GAME_HEIGHT - PLAYER_SIZE, player.y + PLAYER_SPEED);
-          playerMoved = true;
-        }
-        if (keysPressed.current['a'] || keysPressed.current['arrowleft']) {
-          player.x = Math.max(0, player.x - PLAYER_SPEED);
-          playerMoved = true;
-        }
-        if (keysPressed.current['d'] || keysPressed.current['arrowright']) {
-          player.x = Math.min(GAME_WIDTH - PLAYER_SIZE, player.x + PLAYER_SPEED);
-          playerMoved = true;
+        // Player movement
+        if (!player.isDead) {
+            if (keysPressed.current['w'] || keysPressed.current['arrowup']) {
+                player.y = Math.max(0, player.y - PLAYER_SPEED);
+                playerMoved = true;
+            }
+            if (keysPressed.current['s'] || keysPressed.current['arrowdown']) {
+                player.y = Math.min(GAME_HEIGHT - PLAYER_SIZE, player.y + PLAYER_SPEED);
+                playerMoved = true;
+            }
+            if (keysPressed.current['a'] || keysPressed.current['arrowleft']) {
+                player.x = Math.max(0, player.x - PLAYER_SPEED);
+                playerMoved = true;
+            }
+            if (keysPressed.current['d'] || keysPressed.current['arrowright']) {
+                player.x = Math.min(GAME_WIDTH - PLAYER_SIZE, player.x + PLAYER_SPEED);
+                playerMoved = true;
+            }
         }
         
         if (playerMoved) {
-          updateDoc(doc(db, 'rooms', roomId as string), { [`players.${playerId}`]: player });
+          await updateDoc(doc(db, 'rooms', roomId as string), { [`players.${playerId}`]: player });
         }
         
-        if (keysPressed.current['mouse0'] && Date.now() - player.lastShot > 200) {
+        // Player shooting
+        if (keysPressed.current['mouse0'] && !player.isDead && Date.now() - player.lastShot > 200) {
           player.lastShot = Date.now();
           const angle = Math.atan2(mousePosition.current.y - (player.y + PLAYER_SIZE / 2), mousePosition.current.x - (player.x + PLAYER_SIZE / 2));
           const newBullet: BulletState = {
@@ -152,9 +160,78 @@ export function Game() {
             dy: Math.sin(angle) * BULLET_SPEED,
             playerId: playerId,
           };
-          updateDoc(doc(db, 'rooms', roomId as string), { bullets: arrayUnion(newBullet), [`players.${playerId}.lastShot`]: player.lastShot });
+          await updateDoc(doc(db, 'rooms', roomId as string), { bullets: arrayUnion(newBullet), [`players.${playerId}.lastShot`]: player.lastShot });
         }
       }
+
+      // This part should only be run by one client, ideally a host or server
+      // For simplicity in this example, we'll let the first player who joined be the "host"
+      const players = Object.values(gameState.players).sort((a,b) => a.id.localeCompare(b.id));
+      if (players.length > 0 && players[0].id === playerId) {
+        let newBullets = gameState.bullets ? [...gameState.bullets] : [];
+        let newPlayers = { ...gameState.players };
+        const bulletsToRemove: string[] = [];
+        const batch = writeBatch(db);
+        const roomRef = doc(db, 'rooms', roomId as string);
+
+        // Update bullets
+        newBullets = newBullets.map(b => ({
+            ...b,
+            x: b.x + b.dx,
+            y: b.y + b.dy
+        }));
+
+        // Check for bullet collisions
+        for (const bullet of newBullets) {
+            if (bullet.x < 0 || bullet.x > GAME_WIDTH || bullet.y < 0 || bullet.y > GAME_HEIGHT) {
+                bulletsToRemove.push(bullet.id);
+                continue;
+            }
+
+            for (const p of Object.values(newPlayers)) {
+                if (p.id !== bullet.playerId && !p.isDead) {
+                    const distance = Math.sqrt((bullet.x - (p.x + PLAYER_SIZE/2))**2 + (bullet.y - (p.y + PLAYER_SIZE/2))**2);
+                    if (distance < PLAYER_SIZE/2) {
+                        bulletsToRemove.push(bullet.id);
+                        const newHealth = Math.max(0, p.health - 25);
+                        batch.update(roomRef, {[`players.${p.id}.health`]: newHealth});
+
+                        if (newHealth <= 0) {
+                            batch.update(roomRef, {
+                                [`players.${p.id}.deaths`]: increment(1),
+                                [`players.${p.id}.isDead`]: true,
+                                [`players.${bullet.playerId}.kills`]: increment(1),
+                            });
+                            
+                            setTimeout(() => {
+                                const respawnedPlayer = {
+                                    x: Math.random() * (GAME_WIDTH - PLAYER_SIZE),
+                                    y: Math.random() * (GAME_HEIGHT - PLAYER_SIZE),
+                                    health: MAX_HEALTH,
+                                    isDead: false,
+                                };
+                                updateDoc(doc(db, 'rooms', roomId as string), {
+                                    [`players.${p.id}.x`]: respawnedPlayer.x,
+                                    [`players.${p.id}.y`]: respawnedPlayer.y,
+                                    [`players.${p.id}.health`]: respawnedPlayer.health,
+                                    [`players.${p.id}.isDead`]: respawnedPlayer.isDead,
+                                });
+                            }, RESPAWN_TIME);
+                        }
+                        break; 
+                    }
+                }
+            }
+        }
+        
+        const finalBullets = newBullets.filter(b => !bulletsToRemove.includes(b.id));
+        batch.update(roomRef, { bullets: finalBullets });
+
+        if (batch.length > 0) {
+            await batch.commit();
+        }
+      }
+
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
 
@@ -176,7 +253,7 @@ export function Game() {
 
 
   return (
-    <div ref={gameContainerRef} className="w-full h-full bg-gray-800 overflow-hidden" style={{ width: GAME_WIDTH, height: GAME_HEIGHT, margin: 'auto' }}>
+    <div ref={gameContainerRef} className="w-full h-full bg-gray-800 overflow-hidden relative" style={{ width: GAME_WIDTH, height: GAME_HEIGHT, margin: 'auto' }}>
       {Object.values(gameState.players).map(p => <Player key={p.id} player={p} isLocalPlayer={p.id === playerId} />)}
       {gameState.bullets?.map(b => <Bullet key={b.id} bullet={b} />)}
     </div>

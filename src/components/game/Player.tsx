@@ -6,6 +6,7 @@ interface PlayerProps {
         x: number;
         y: number;
         health: number;
+        isDead: boolean;
     };
     isLocalPlayer: boolean;
 }
@@ -13,13 +14,17 @@ interface PlayerProps {
 export function Player({ player, isLocalPlayer }: PlayerProps) {
   const color = isLocalPlayer ? 'bg-blue-500' : 'bg-red-500';
 
+  if (player.isDead) {
+      return null;
+  }
+
   return (
     <div
       className={`absolute w-10 h-10 rounded-full ${color} border-2 border-white`}
       style={{
         left: player.x,
         top: player.y,
-        transition: 'left 0.1s linear, top 0.1s linear',
+        transition: 'left 0.05s linear, top 0.05s linear',
       }}
     >
       <div className="relative w-full h-full">
