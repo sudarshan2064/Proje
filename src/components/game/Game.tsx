@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, onSnapshot, setDoc, getDoc, updateDoc, arrayUnion, writeBatch, increment } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, updateDoc, arrayUnion, writeBatch, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Player } from './Player';
 import { Bullet } from './Bullet';
@@ -59,21 +59,21 @@ export function Game() {
     const initPlayer = async () => {
       if (!roomId) return;
       const roomRef = doc(db, 'rooms', roomId as string);
-      const roomSnap = await getDoc(roomRef);
-      if (!roomSnap.exists() || !roomSnap.data().players?.[localPlayerId]) {
-        const newPlayer: PlayerState = {
-          id: localPlayerId,
-          x: Math.random() * (GAME_WIDTH - PLAYER_SIZE),
-          y: Math.random() * (GAME_HEIGHT - PLAYER_SIZE),
-          health: MAX_HEALTH,
-          kills: 0,
-          deaths: 0,
-          lastShot: 0,
-          isDead: false,
-        };
-        // Use set with merge to avoid race conditions and offline errors
-        await setDoc(roomRef, { players: { [localPlayerId]: newPlayer } }, { merge: true });
-      }
+      
+      const newPlayer: PlayerState = {
+        id: localPlayerId,
+        x: Math.random() * (GAME_WIDTH - PLAYER_SIZE),
+        y: Math.random() * (GAME_HEIGHT - PLAYER_SIZE),
+        health: MAX_HEALTH,
+        kills: 0,
+        deaths: 0,
+        lastShot: 0,
+        isDead: false,
+      };
+
+      // This will create the player if they don't exist, or update their state if they do.
+      // It avoids reading the document first, which caused the offline error.
+      await setDoc(roomRef, { players: { [localPlayerId]: newPlayer } }, { merge: true });
     };
 
     initPlayer();
@@ -247,7 +247,7 @@ export function Game() {
         }
         
         const finalBullets = newBullets.filter(b => !bulletsToRemove.includes(b.id));
-        if (finalBullets.length !== (gameState.bullets?.length || 0)) {
+        if (finalBullets.length !== (gameState.bullets?.length || 0) || bulletsToRemove.length > 0) {
            batch.update(roomRef, { bullets: finalBullets });
            hasUpdates = true;
         }
@@ -284,5 +284,3 @@ export function Game() {
     </div>
   );
 }
-
-    
