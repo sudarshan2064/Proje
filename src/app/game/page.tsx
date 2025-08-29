@@ -52,12 +52,8 @@ export default function GamePage() {
   }, []);
 
   const handleCardClick = (id: number) => {
-    if (isChecking || flippedCards.length === 2) {
+    if (isChecking || flippedCards.length === 2 || (gameMode === 'single' && currentPlayer === 2)) {
       return;
-    }
-    
-    if (gameMode === 'single' && currentPlayer === 2) {
-        return;
     }
 
     const card = cards.find(c => c.id === id);
@@ -97,8 +93,7 @@ export default function GamePage() {
       }));
       setFlippedCards([]);
       setIsChecking(false);
-      
-      if (gameMode === 'single' && currentPlayer === 2) {
+       if (gameMode === 'single' && currentPlayer === 2) {
          setTimeout(botTurn, 1000);
       }
     } else {
@@ -121,12 +116,11 @@ export default function GamePage() {
   const botTurn = useCallback(() => {
     if (isChecking) return;
   
-    const availableCards = cards.filter(card => !card.isMatched);
+    const availableCards = cards.filter(card => !card.isMatched && !card.isFlipped);
     if (availableCards.length < 2) return;
   
     setIsChecking(true);
   
-    // Simple random bot
     let firstPickIndex = Math.floor(Math.random() * availableCards.length);
     let secondPickIndex = Math.floor(Math.random() * availableCards.length);
   
@@ -138,12 +132,14 @@ export default function GamePage() {
     const secondCardId = availableCards[secondPickIndex].id;
   
     setTimeout(() => {
-      handleCardClick(firstCardId);
+      setCards(prev => prev.map(c => c.id === firstCardId ? {...c, isFlipped: true} : c));
+      setFlippedCards([firstCardId]);
     }, 500);
   
     setTimeout(() => {
-      handleCardClick(secondCardId);
-      setIsChecking(false); 
+      setCards(prev => prev.map(c => c.id === secondCardId ? {...c, isFlipped: true} : c));
+      setFlippedCards(prev => [...prev, secondCardId]);
+      // setIsChecking(false) is handled in checkForMatch
     }, 1200);
   
   }, [cards, isChecking]);

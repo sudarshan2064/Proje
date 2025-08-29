@@ -28,9 +28,9 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
   const getAiHint = (url: string) => {
     try {
       const parts = url.split('/');
-      const seedPart = parts.find(p => p.startsWith('seed:'));
+      const seedPart = parts.find(p => p.startsWith('seed'));
       if (seedPart) {
-        return seedPart.split(':')[1];
+        return seedPart.split('/')[1];
       }
     } catch (e) {
       // ignore
