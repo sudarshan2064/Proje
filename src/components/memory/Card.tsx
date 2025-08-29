@@ -50,7 +50,7 @@ const Card: React.FC<CardProps> = ({ card, onClick, isJustMatched }) => {
         </div>
         <div
           className={cn(
-            'absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden text-5xl'
+            'absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden text-4xl'
           )}
         >
           {/* Front of the card */}
