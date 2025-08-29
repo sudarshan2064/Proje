@@ -117,7 +117,7 @@ export default function GamePage() {
           handleCardClick(firstCardId);
           setTimeout(() => handleCardClick(secondCardId), 500);
         }
-         // In case bot fails to pick, release the lock
+         // In case bot fails to pick, release the lock and return to player
         else {
             setIsChecking(false);
             setCurrentPlayer(1);
