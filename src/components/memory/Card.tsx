@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { icons } from 'lucide-react';
 
 export interface CardType {
   id: number;
@@ -24,6 +25,8 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
     }
   };
 
+  const LucideIcon = icons[value as keyof typeof icons];
+
   return (
     <div
       className={cn(
@@ -40,7 +43,7 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
       >
         <div className="absolute w-full h-full backface-hidden rounded-lg bg-gray-300 dark:bg-gray-700" />
         <div className="absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-          {value}
+          {LucideIcon ? <LucideIcon size={48} /> : value}
         </div>
       </div>
     </div>
@@ -55,22 +58,5 @@ export const CardSkeleton = () => {
         <div className="w-24 h-32 rounded-lg bg-gray-300 dark:bg-gray-700 animate-pulse" />
     )
 }
-
-// Add these to globals.css for 3D transform effects
-/*
-.transform-style-3d {
-  transform-style: preserve-3d;
-}
-.rotate-y-180 {
-  transform: rotateY(180deg);
-}
-.rotate-y-0 {
-    transform: rotateY(0deg);
-}
-.backface-hidden {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-*/
 
 export default Card;

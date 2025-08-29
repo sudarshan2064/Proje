@@ -13,8 +13,13 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { CardType } from '@/components/memory/Card';
+import { icons } from 'lucide-react';
 
-const cardValues = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+const cardValues = [
+  'Clock', 'Apple', 'Banana', 'Brain', 'Car', 'Cat', 'Dog', 'Fish', 
+  'Gift', 'Heart', 'Home', 'Star'
+];
+
 
 const generateCards = () => {
   const duplicatedValues = [...cardValues, ...cardValues];
