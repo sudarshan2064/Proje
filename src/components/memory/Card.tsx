@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { icons } from 'lucide-react';
+import Image from 'next/image';
 
 export interface CardType {
   id: number;
@@ -25,12 +25,23 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
     }
   };
 
-  const LucideIcon = icons[value as keyof typeof icons];
+  const getAiHint = (url: string) => {
+    try {
+      const parts = url.split('/');
+      const seedPart = parts.find(p => p.startsWith('seed:'));
+      if (seedPart) {
+        return seedPart.split(':')[1];
+      }
+    } catch (e) {
+      // ignore
+    }
+    return 'placeholder';
+  }
 
   return (
     <div
       className={cn(
-        'w-24 h-32 rounded-lg cursor-pointer perspective-1000 group'
+        'w-32 h-32 rounded-lg cursor-pointer perspective-1000 group'
       )}
       onClick={handleClick}
     >
@@ -43,14 +54,21 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
       >
         <div className={cn("absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700 text-white")}>
           {/* Back of the card */}
-          <div className="text-2xl font-bold">?</div>
+          <div className="text-4xl font-bold">?</div>
         </div>
         <div className={cn(
-            "absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card",
-             isMatched ? 'bg-green-500/20' : 'bg-card'
+            "absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden",
+             isMatched ? 'bg-green-500/20 ring-2 ring-green-500' : 'bg-card'
             )}>
           {/* Front of the card */}
-          {LucideIcon ? <LucideIcon size={40} className={cn(isMatched ? 'text-green-500' : 'text-primary')} /> : value}
+          <Image 
+            src={value}
+            alt="Card front"
+            fill
+            className="object-cover"
+            data-ai-hint={getAiHint(value)}
+            sizes="200px"
+          />
         </div>
       </div>
     </div>
@@ -62,7 +80,7 @@ export const MemoizedCard = React.memo(Card);
 
 export const CardSkeleton = () => {
     return (
-        <div className="w-24 h-32 rounded-lg bg-gray-300 dark:bg-gray-700 animate-pulse" />
+        <div className="w-32 h-32 rounded-lg bg-gray-300 dark:bg-gray-700 animate-pulse" />
     )
 }
 

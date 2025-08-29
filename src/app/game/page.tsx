@@ -15,8 +15,15 @@ import { useToast } from '@/hooks/use-toast';
 import { CardType } from '@/components/memory/Card';
 
 const cardValues = [
-  'Clock', 'Apple', 'Banana', 'Brain', 'Car', 'Cat', 'Dog', 'Fish', 
-  'Gift'
+  'https://picsum.photos/seed/clock/200',
+  'https://picsum.photos/seed/apple/200',
+  'https://picsum.photos/seed/banana/200',
+  'https://picsum.photos/seed/brain/200',
+  'https://picsum.photos/seed/car/200',
+  'https://picsum.photos/seed/cat/200',
+  'https://picsum.photos/seed/dog/200',
+  'https://picsum.photos/seed/fish/200',
+  'https://picsum.photos/seed/gift/200'
 ];
 
 const generateCards = () => {
@@ -49,7 +56,6 @@ export default function GamePage() {
       return;
     }
     
-    // Prevent player from clicking during bot's turn
     if (gameMode === 'single' && currentPlayer === 2) {
         return;
     }
@@ -91,7 +97,7 @@ export default function GamePage() {
       }));
       setFlippedCards([]);
       setIsChecking(false);
-      // If it was a match, the current player (including bot) goes again
+      
       if (gameMode === 'single' && currentPlayer === 2) {
          setTimeout(botTurn, 1000);
       }
@@ -114,39 +120,32 @@ export default function GamePage() {
 
   const botTurn = useCallback(() => {
     if (isChecking) return;
-
-    const availableCards = cards.filter(card => !card.isFlipped && !card.isMatched);
-    if (availableCards.length >= 2) {
-      setIsChecking(true); // Lock board for bot's turn
-
-      const firstPickIndex = Math.floor(Math.random() * availableCards.length);
-      let secondPickIndex = Math.floor(Math.random() * (availableCards.length - 1));
-      if (secondPickIndex >= firstPickIndex) {
-        secondPickIndex++;
-      }
-      
-      const firstCardId = availableCards[firstPickIndex].id;
-      const secondCardId = availableCards[secondPickIndex].id;
-      
-      // Flip first card
-      setCards(prevCards =>
-        prevCards.map(c =>
-          c.id === firstCardId ? { ...c, isFlipped: true } : c
-        )
-      );
-      setFlippedCards([firstCardId]);
-
-      // Wait a moment then flip the second card
-      setTimeout(() => {
-        setCards(prevCards =>
-          prevCards.map(c =>
-            c.id === secondCardId ? { ...c, isFlipped: true } : c
-          )
-        );
-        setFlippedCards([firstCardId, secondCardId]);
-        setIsChecking(false); // Unlock for checkForMatch
-      }, 700);
+  
+    const availableCards = cards.filter(card => !card.isMatched);
+    if (availableCards.length < 2) return;
+  
+    setIsChecking(true);
+  
+    // Simple random bot
+    let firstPickIndex = Math.floor(Math.random() * availableCards.length);
+    let secondPickIndex = Math.floor(Math.random() * availableCards.length);
+  
+    while (firstPickIndex === secondPickIndex) {
+      secondPickIndex = Math.floor(Math.random() * availableCards.length);
     }
+  
+    const firstCardId = availableCards[firstPickIndex].id;
+    const secondCardId = availableCards[secondPickIndex].id;
+  
+    setTimeout(() => {
+      handleCardClick(firstCardId);
+    }, 500);
+  
+    setTimeout(() => {
+      handleCardClick(secondCardId);
+      setIsChecking(false); 
+    }, 1200);
+  
   }, [cards, isChecking]);
 
 
@@ -217,5 +216,3 @@ export default function GamePage() {
     </div>
   );
 }
-
-    
