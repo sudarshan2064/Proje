@@ -17,8 +17,8 @@ import { CardType } from '@/components/memory/Card';
 const cardValues = [
   'https://placehold.co/200x200/f87171/white?text=Apple',
   'https://placehold.co/200x200/fbbf24/white?text=Banana',
-  'https://placehold.co/200x200/34d399/white?text=Car',
-  'https://placehold.co/200x200/60a5fa/white?text=House',
+  'https://placehold.co/200x200/34d399/white?text=Grapes',
+  'https://placehold.co/200x200/60a5fa/white?text=Football',
   'https://placehold.co/200x200/c084fc/white?text=Ball',
   'https://placehold.co/200x200/f472b6/white?text=Sushant',
   'https://placehold.co/200x200/818cf8/white?text=Apar',
