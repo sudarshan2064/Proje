@@ -15,15 +15,15 @@ import { useToast } from '@/hooks/use-toast';
 import { CardType } from '@/components/memory/Card';
 
 const cardValues = [
-  'https://picsum.photos/seed/clock/200',
   'https://picsum.photos/seed/apple/200',
   'https://picsum.photos/seed/banana/200',
-  'https://picsum.photos/seed/brain/200',
-  'https://picsum.photos/seed/car/200',
-  'https://picsum.photos/seed/cat/200',
-  'https://picsum.photos/seed/dog/200',
-  'https://picsum.photos/seed/fish/200',
-  'https://picsum.photos/seed/gift/200'
+  'https://picsum.photos/seed/orange/200',
+  'https://picsum.photos/seed/soccer-ball/200',
+  'https://picsum.photos/seed/basketball/200',
+  'https://picsum.photos/seed/baseball-bat/200',
+  'https://picsum.photos/seed/nepal/200',
+  'https://picsum.photos/seed/house/200',
+  'https://picsum.photos/seed/car/200'
 ];
 
 const generateCards = () => {
@@ -139,7 +139,6 @@ export default function GamePage() {
     setTimeout(() => {
       setCards(prev => prev.map(c => c.id === secondCardId ? {...c, isFlipped: true} : c));
       setFlippedCards(prev => [...prev, secondCardId]);
-      // setIsChecking(false) is handled in checkForMatch
     }, 1200);
   
   }, [cards, isChecking]);
