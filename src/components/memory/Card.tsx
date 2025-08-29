@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
 
 export interface CardType {
   id: number;
@@ -39,13 +38,12 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
           isFlipped ? 'rotate-y-180' : ''
         )}
       >
-        <div className={cn("absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700 text-white")}>
+        <div className={cn("absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center bg-card text-card-foreground")}>
           {/* Back of the card */}
           <div className="text-4xl font-bold">?</div>
         </div>
         <div className={cn(
-            "absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden text-5xl",
-             isFlipped && !isMatched ? 'bg-card' : 'bg-green-500/20'
+            "absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden text-5xl"
             )}>
           {/* Front of the card */}
           {value}
@@ -54,14 +52,5 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
     </div>
   );
 };
-
-
-export const MemoizedCard = React.memo(Card);
-
-export const CardSkeleton = () => {
-    return (
-        <div className="w-32 h-32 rounded-lg bg-gray-300 dark:bg-gray-700 animate-pulse" />
-    )
-}
 
 export default Card;
