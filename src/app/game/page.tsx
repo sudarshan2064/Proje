@@ -1,87 +1,175 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Player from '@/components/game/Player';
-import Npc from '@/components/game/Npc';
-import GameMap from '@/components/game/GameMap';
+import React, { useState, useEffect, useCallback } from 'react';
+import GameBoard from '@/components/memory/GameBoard';
+import Scoreboard from '@/components/memory/Scoreboard';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { CardType } from '@/components/memory/Card';
 
-const TILE_SIZE = 32;
-const MAP_WIDTH_TILES = 25;
-const MAP_HEIGHT_TILES = 15;
+const cardValues = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
-const MAP_WIDTH_PX = MAP_WIDTH_TILES * TILE_SIZE;
-const MAP_HEIGHT_PX = MAP_HEIGHT_TILES * TILE_SIZE;
+const generateCards = () => {
+  const duplicatedValues = [...cardValues, ...cardValues];
+  return duplicatedValues
+    .map((value, index) => ({
+      id: index,
+      value,
+      isFlipped: false,
+      isMatched: false,
+    }))
+    .sort(() => Math.random() - 0.5);
+};
 
 export default function GamePage() {
-  const [playerPosition, setPlayerPosition] = useState({ x: 5, y: 5 });
-  const [showDialog, setShowDialog] = useState(false);
+  const [gameMode, setGameMode] = useState<'single' | 'two-player'>('single');
+  const [cards, setCards] = useState<CardType[]>(generateCards());
+  const [flippedCards, setFlippedCards] = useState<number[]>([]);
+  const [scores, setScores] = useState({ player1: 0, player2: 0 });
+  const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
+  const [isChecking, setIsChecking] = useState(false);
+  const { toast } = useToast();
 
-  const npcPosition = { x: 15, y: 8 };
+  const handleCardClick = (id: number) => {
+    if (isChecking || flippedCards.includes(id) || cards.find(c => c.id === id)?.isMatched) {
+      return;
+    }
+
+    const newFlippedCards = [...flippedCards, id];
+    setFlippedCards(newFlippedCards);
+    setCards(prevCards =>
+      prevCards.map(card =>
+        card.id === id ? { ...card, isFlipped: true } : card
+      )
+    );
+  };
+
+  const checkForMatch = useCallback(() => {
+    if (flippedCards.length === 2) {
+      setIsChecking(true);
+      const [firstCardId, secondCardId] = flippedCards;
+      const firstCard = cards.find(c => c.id === firstCardId);
+      const secondCard = cards.find(c => c.id === secondCardId);
+
+      if (firstCard && secondCard && firstCard.value === secondCard.value) {
+        setCards(prevCards =>
+          prevCards.map(card =>
+            card.id === firstCardId || card.id === secondCardId
+              ? { ...card, isMatched: true }
+              : card
+          )
+        );
+        setScores(prevScores => ({
+          ...prevScores,
+          [currentPlayer === 1 ? 'player1' : 'player2']:
+            prevScores[currentPlayer === 1 ? 'player1' : 'player2'] + 1,
+        }));
+        setFlippedCards([]);
+        setIsChecking(false);
+      } else {
+        setTimeout(() => {
+          setCards(prevCards =>
+            prevCards.map(card =>
+              card.id === firstCardId || card.id === secondCardId
+                ? { ...card, isFlipped: false }
+                : card
+            )
+          );
+          setFlippedCards([]);
+          setIsChecking(false);
+          setCurrentPlayer(prev => (prev === 1 ? 2 : 1));
+        }, 1000);
+      }
+    }
+  }, [flippedCards, cards, currentPlayer]);
+
+  const botTurn = useCallback(() => {
+    if (gameMode === 'single' && currentPlayer === 2 && !isChecking) {
+      setTimeout(() => {
+        const availableCards = cards.filter(card => !card.isFlipped && !card.isMatched);
+        if (availableCards.length >= 2) {
+          const firstPickIndex = Math.floor(Math.random() * availableCards.length);
+          const firstCardId = availableCards[firstPickIndex].id;
+          
+          let secondPickIndex = Math.floor(Math.random() * availableCards.length);
+          while(secondPickIndex === firstPickIndex) {
+             secondPickIndex = Math.floor(Math.random() * availableCards.length);
+          }
+          const secondCardId = availableCards[secondPickIndex].id;
+
+          handleCardClick(firstCardId);
+          setTimeout(() => handleCardClick(secondCardId), 500);
+        }
+      }, 1000);
+    }
+  }, [cards, currentPlayer, gameMode, isChecking]);
+
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      e.preventDefault();
-      setPlayerPosition((prev) => {
-        let { x, y } = prev;
-        switch (e.key) {
-          case 'w':
-          case 'ArrowUp':
-            y = Math.max(0, y - 1);
-            break;
-          case 's':
-          case 'ArrowDown':
-            y = Math.min(MAP_HEIGHT_TILES - 1, y + 1);
-            break;
-          case 'a':
-          case 'ArrowLeft':
-            x = Math.max(0, x - 1);
-            break;
-          case 'd':
-          case 'ArrowRight':
-            x = Math.min(MAP_WIDTH_TILES - 1, x + 1);
-            break;
-          case 'e':
-             const distance = Math.sqrt(
-              Math.pow(playerPosition.x - npcPosition.x, 2) +
-              Math.pow(playerPosition.y - npcPosition.y, 2)
-            );
-            if (distance < 2) {
-              setShowDialog((prev) => !prev);
-            }
-            break;
-          default:
-            break;
-        }
-        return { x, y };
-      });
-    };
+    checkForMatch();
+  }, [checkForMatch]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [playerPosition.x, playerPosition.y, npcPosition.x, npcPosition.y]);
+  useEffect(() => {
+    botTurn();
+  }, [botTurn]);
+
+  useEffect(() => {
+    const allMatched = cards.every(card => card.isMatched);
+    if (allMatched && (scores.player1 + scores.player2 === cardValues.length)) {
+      let winnerMessage = '';
+      if (gameMode === 'single') {
+        winnerMessage = scores.player1 > scores.player2 ? 'You win!' : 'Bot wins!';
+      } else {
+        if (scores.player1 === scores.player2) {
+          winnerMessage = "It's a tie!";
+        } else {
+          winnerMessage = `Player ${scores.player1 > scores.player2 ? 1 : 2} wins!`;
+        }
+      }
+      toast({
+        title: 'Game Over!',
+        description: winnerMessage,
+      });
+    }
+  }, [cards, scores, gameMode, toast]);
+
+  const restartGame = () => {
+    setCards(generateCards());
+    setFlippedCards([]);
+    setScores({ player1: 0, player2: 0 });
+    setCurrentPlayer(1);
+    setIsChecking(false);
+  };
+  
+  const handleModeChange = (value: string) => {
+    setGameMode(value as 'single' | 'two-player');
+    restartGame();
+  }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-800">
-      <div
-        className="relative overflow-hidden border-4 border-gray-900 bg-green-500"
-        style={{
-          width: MAP_WIDTH_PX,
-          height: MAP_HEIGHT_PX,
-        }}
-      >
-        <GameMap width={MAP_WIDTH_TILES} height={MAP_HEIGHT_TILES} tileSize={TILE_SIZE} />
-        <Player position={playerPosition} tileSize={TILE_SIZE} />
-        <Npc position={npcPosition} tileSize={TILE_SIZE} />
-        {showDialog && (
-          <div className="absolute bottom-4 left-4 right-4 bg-white/80 p-4 rounded-lg text-gray-900 border-2 border-gray-700">
-            <p className="font-bold">Old Man:</p>
-            <p>Greetings, traveler! Be wary of the slimes in the north.</p>
-             <button onClick={() => setShowDialog(false)} className="text-sm text-red-600 mt-2">Close</button>
-          </div>
-        )}
+    <div className="container mx-auto p-4 flex flex-col items-center">
+      <h1 className="text-4xl font-bold mb-4">Memory Game</h1>
+      <div className="flex gap-4 mb-4">
+        <Select onValueChange={handleModeChange} defaultValue={gameMode}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="single">Single Player vs Bot</SelectItem>
+            <SelectItem value="two-player">Two Players</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={restartGame}>Restart Game</Button>
       </div>
+      <Scoreboard scores={scores} currentPlayer={currentPlayer} gameMode={gameMode} />
+      <GameBoard cards={cards} onCardClick={handleCardClick} />
     </div>
   );
 }
