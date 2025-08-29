@@ -25,19 +25,6 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
     }
   };
 
-  const getAiHint = (url: string) => {
-    try {
-      const parts = url.split('/');
-      const seedPart = parts.find(p => p.startsWith('seed'));
-      if (seedPart) {
-        return seedPart.split('/')[1];
-      }
-    } catch (e) {
-      // ignore
-    }
-    return 'placeholder';
-  }
-
   return (
     <div
       className={cn(
@@ -57,18 +44,11 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
           <div className="text-4xl font-bold">?</div>
         </div>
         <div className={cn(
-            "absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden",
+            "absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden text-5xl",
              isFlipped && !isMatched ? 'bg-card' : 'bg-green-500/20'
             )}>
           {/* Front of the card */}
-          <Image 
-            src={value}
-            alt="Card front"
-            fill
-            className="object-cover"
-            data-ai-hint={getAiHint(value)}
-            sizes="200px"
-          />
+          {value}
         </div>
       </div>
     </div>
