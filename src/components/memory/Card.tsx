@@ -30,20 +30,22 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
   return (
     <div
       className={cn(
-        'w-24 h-32 rounded-lg cursor-pointer flex items-center justify-center text-4xl font-bold transition-transform duration-500',
-        'transform-style-3d'
+        'w-20 h-28 rounded-lg cursor-pointer perspective-1000'
       )}
       onClick={handleClick}
     >
       <div
-        className={cn('absolute w-full h-full backface-hidden rounded-lg transition-transform duration-500', 
-          isFlipped ? 'rotate-y-180' : 'rotate-y-0',
-          isMatched ? 'bg-green-500' : 'bg-blue-500'
+        className={cn(
+          'relative w-full h-full transition-transform duration-500 transform-style-3d',
+          isFlipped ? 'rotate-y-180' : ''
         )}
       >
-        <div className="absolute w-full h-full backface-hidden rounded-lg bg-gray-300 dark:bg-gray-700" />
+        <div className={cn("absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center", isMatched ? 'bg-green-500' : 'bg-blue-500')}>
+          {/* Back of the card */}
+        </div>
         <div className="absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-          {LucideIcon ? <LucideIcon size={48} /> : value}
+          {/* Front of the card */}
+          {LucideIcon ? <LucideIcon size={40} /> : value}
         </div>
       </div>
     </div>
@@ -55,7 +57,7 @@ export const MemoizedCard = React.memo(Card);
 
 export const CardSkeleton = () => {
     return (
-        <div className="w-24 h-32 rounded-lg bg-gray-300 dark:bg-gray-700 animate-pulse" />
+        <div className="w-20 h-28 rounded-lg bg-gray-300 dark:bg-gray-700 animate-pulse" />
     )
 }
 
