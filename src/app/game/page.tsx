@@ -50,55 +50,56 @@ export default function GamePage() {
       return;
     }
 
-    const newFlippedCards = [...flippedCards, id];
     setCards(prevCards =>
       prevCards.map(card =>
         card.id === id ? { ...card, isFlipped: true } : card
       )
     );
     
-    setFlippedCards(newFlippedCards);
+    setFlippedCards(prev => [...prev, id]);
   };
 
   const checkForMatch = useCallback(() => {
-    if (flippedCards.length === 2) {
-      setIsChecking(true);
-      const [firstCardId, secondCardId] = flippedCards;
-      const firstCard = cards.find(c => c.id === firstCardId);
-      const secondCard = cards.find(c => c.id === secondCardId);
+    if (flippedCards.length < 2) return;
 
-      if (firstCard && secondCard && firstCard.value === secondCard.value) {
+    setIsChecking(true);
+    const [firstCardId, secondCardId] = flippedCards;
+    const firstCard = cards.find(c => c.id === firstCardId);
+    const secondCard = cards.find(c => c.id === secondCardId);
+
+    if (firstCard && secondCard && firstCard.value === secondCard.value) {
+      setCards(prevCards =>
+        prevCards.map(card =>
+          card.id === firstCardId || card.id === secondCardId
+            ? { ...card, isMatched: true, isFlipped: true }
+            : card
+        )
+      );
+      setScores(prevScores => ({
+        ...prevScores,
+        [currentPlayer === 1 ? 'player1' : 'player2']:
+          prevScores[currentPlayer === 1 ? 'player1' : 'player2'] + 1,
+      }));
+      setFlippedCards([]);
+      setIsChecking(false);
+      // Don't switch player on match
+    } else {
+      // No match, flip back
+      setTimeout(() => {
         setCards(prevCards =>
           prevCards.map(card =>
             card.id === firstCardId || card.id === secondCardId
-              ? { ...card, isMatched: true }
+              ? { ...card, isFlipped: false }
               : card
           )
         );
-        setScores(prevScores => ({
-          ...prevScores,
-          [currentPlayer === 1 ? 'player1' : 'player2']:
-            prevScores[currentPlayer === 1 ? 'player1' : 'player2'] + 1,
-        }));
         setFlippedCards([]);
+        setCurrentPlayer(prev => (prev === 1 ? 2 : 1));
         setIsChecking(false);
-      } else {
-        setTimeout(() => {
-          setCards(prevCards =>
-            prevCards.map(card =>
-              card.id === firstCardId || card.id === secondCardId
-                ? { ...card, isFlipped: false }
-                : card
-            )
-          );
-          setFlippedCards([]);
-          setCurrentPlayer(prev => (prev === 1 ? 2 : 1));
-          setIsChecking(false);
-        }, 1000);
-      }
+      }, 1000);
     }
   }, [flippedCards, cards, currentPlayer]);
-
+  
   const botTurn = useCallback(() => {
     if (gameMode === 'single' && currentPlayer === 2 && !isChecking) {
        setIsChecking(true); // Prevent player from clicking during bot's turn
@@ -114,13 +115,19 @@ export default function GamePage() {
           const firstCardId = availableCards[firstPickIndex].id;
           const secondCardId = availableCards[secondPickIndex].id;
           
-          handleCardClick(firstCardId);
-          setTimeout(() => handleCardClick(secondCardId), 500);
-        }
-         // In case bot fails to pick, release the lock and return to player
-        else {
-            setIsChecking(false);
-            setCurrentPlayer(1);
+          // Show first card
+          setCards(prev => prev.map(c => c.id === firstCardId ? {...c, isFlipped: true} : c));
+
+          // Wait a bit, then show second card
+          setTimeout(() => {
+            setCards(prev => prev.map(c => c.id === secondCardId ? {...c, isFlipped: true} : c));
+            setFlippedCards([firstCardId, secondCardId]);
+          }, 700);
+
+        } else {
+          // No cards for bot to pick, should not happen in a valid game state
+          setCurrentPlayer(1);
+          setIsChecking(false);
         }
       }, 1000);
     }
@@ -132,12 +139,15 @@ export default function GamePage() {
       checkForMatch();
     }
   }, [flippedCards, checkForMatch]);
-
+  
   useEffect(() => {
-     if (gameMode === 'single' && currentPlayer === 2 && !isChecking) {
-        botTurn();
+     if (gameMode === 'single' && currentPlayer === 2 && cards.length > 0 && !isChecking) {
+        const anyFlipped = cards.some(c => c.isFlipped && !c.isMatched);
+        if (!anyFlipped) {
+            botTurn();
+        }
      }
-  }, [currentPlayer, gameMode, isChecking, botTurn]);
+  }, [currentPlayer, gameMode, cards, isChecking, botTurn]);
 
 
   useEffect(() => {
