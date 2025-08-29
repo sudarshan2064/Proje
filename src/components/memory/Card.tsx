@@ -41,15 +41,15 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
   return (
     <div
       className={cn(
-        'w-32 h-32 rounded-lg cursor-pointer perspective-1000 group'
+        'w-32 h-32 rounded-lg cursor-pointer perspective-1000 group',
+        isMatched && 'invisible'
       )}
       onClick={handleClick}
     >
       <div
         className={cn(
           'relative w-full h-full transition-transform duration-500 transform-style-3d shadow-lg rounded-lg',
-          isFlipped ? 'rotate-y-180' : '',
-          isMatched && 'opacity-70'
+          isFlipped ? 'rotate-y-180' : ''
         )}
       >
         <div className={cn("absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700 text-white")}>
@@ -58,7 +58,7 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
         </div>
         <div className={cn(
             "absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden",
-             isMatched ? 'bg-green-500/20 ring-2 ring-green-500' : 'bg-card'
+             isFlipped && !isMatched ? 'bg-card' : 'bg-green-500/20'
             )}>
           {/* Front of the card */}
           <Image 

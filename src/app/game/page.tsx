@@ -52,8 +52,13 @@ export default function GamePage() {
   }, []);
 
   const handleCardClick = (id: number) => {
-    if (isChecking || flippedCards.length === 2 || (gameMode === 'single' && currentPlayer === 2)) {
+    if (isChecking || flippedCards.length === 2) {
       return;
+    }
+    
+    // Prevent player from clicking during bot's turn
+    if (gameMode === 'single' && currentPlayer === 2) {
+        return;
     }
 
     const card = cards.find(c => c.id === id);
@@ -132,16 +137,14 @@ export default function GamePage() {
     const secondCardId = availableCards[secondPickIndex].id;
   
     setTimeout(() => {
-      setCards(prev => prev.map(c => c.id === firstCardId ? {...c, isFlipped: true} : c));
-      setFlippedCards([firstCardId]);
+      handleCardClick(firstCardId);
     }, 500);
   
     setTimeout(() => {
-      setCards(prev => prev.map(c => c.id === secondCardId ? {...c, isFlipped: true} : c));
-      setFlippedCards(prev => [...prev, secondCardId]);
+      handleCardClick(secondCardId);
     }, 1200);
   
-  }, [cards, isChecking]);
+  }, [cards, isChecking, handleCardClick]);
 
 
   useEffect(() => {
