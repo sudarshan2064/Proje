@@ -46,7 +46,7 @@ export default function GamePage() {
   }, []);
 
   const handleCardClick = (id: number) => {
-    if (isChecking || flippedCards.includes(id) || cards.find(c => c.id === id)?.isMatched) {
+    if (isChecking || flippedCards.length === 2 || cards.find(c => c.id === id)?.isMatched || cards.find(c => c.id === id)?.isFlipped) {
       return;
     }
 
@@ -57,11 +57,7 @@ export default function GamePage() {
       )
     );
     
-    if (newFlippedCards.length === 2) {
-      setFlippedCards(newFlippedCards);
-    } else {
-        setFlippedCards(newFlippedCards);
-    }
+    setFlippedCards(newFlippedCards);
   };
 
   const checkForMatch = useCallback(() => {
@@ -96,14 +92,12 @@ export default function GamePage() {
             )
           );
           setFlippedCards([]);
+          setCurrentPlayer(prev => (prev === 1 ? 2 : 1));
           setIsChecking(false);
-          if (gameMode !== 'two-player' || currentPlayer !== 0) {
-            setCurrentPlayer(prev => (prev === 1 ? 2 : 1));
-          }
         }, 1000);
       }
     }
-  }, [flippedCards, cards, currentPlayer, gameMode]);
+  }, [flippedCards, cards, currentPlayer]);
 
   const botTurn = useCallback(() => {
     if (gameMode === 'single' && currentPlayer === 2 && !isChecking) {
@@ -123,16 +117,21 @@ export default function GamePage() {
           handleCardClick(firstCardId);
           setTimeout(() => handleCardClick(secondCardId), 500);
         }
+         // In case bot fails to pick, release the lock
+        else {
+            setIsChecking(false);
+            setCurrentPlayer(1);
+        }
       }, 1000);
     }
   }, [cards, currentPlayer, gameMode, isChecking]);
 
 
   useEffect(() => {
-    if (flippedCards.length === 2 && !isChecking) {
+    if (flippedCards.length === 2) {
       checkForMatch();
     }
-  }, [flippedCards, checkForMatch, isChecking]);
+  }, [flippedCards, checkForMatch]);
 
   useEffect(() => {
      if (gameMode === 'single' && currentPlayer === 2 && !isChecking) {
@@ -142,7 +141,7 @@ export default function GamePage() {
 
 
   useEffect(() => {
-    if (cards.length === 0 || cards.every(c => c.isMatched)) {
+    if (cards.length > 0 && cards.every(c => c.isMatched)) {
        const allMatched = cards.every(card => card.isMatched);
         if (allMatched && (scores.player1 + scores.player2 === cardValues.length)) {
           let winnerMessage = '';
