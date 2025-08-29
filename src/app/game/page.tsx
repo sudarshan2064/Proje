@@ -15,15 +15,15 @@ import { useToast } from '@/hooks/use-toast';
 import { CardType } from '@/components/memory/Card';
 
 const cardValues = [
-  'https://picsum.photos/seed/apple/200',
-  'https://picsum.photos/seed/banana/200',
-  'https://picsum.photos/seed/orange/200',
-  'https://picsum.photos/seed/soccer-ball/200',
-  'https://picsum.photos/seed/basketball/200',
-  'https://picsum.photos/seed/baseball-bat/200',
-  'https://picsum.photos/seed/nepal/200',
-  'https://picsum.photos/seed/house/200',
-  'https://picsum.photos/seed/car/200'
+  'https://placehold.co/200x200/f87171/white?text=Apple',
+  'https://placehold.co/200x200/fbbf24/white?text=Banana',
+  'https://placehold.co/200x200/34d399/white?text=Car',
+  'https://placehold.co/200x200/60a5fa/white?text=House',
+  'https://placehold.co/200x200/c084fc/white?text=Ball',
+  'https://placehold.co/200x200/f472b6/white?text=Dog',
+  'https://placehold.co/200x200/818cf8/white?text=Cat',
+  'https://placehold.co/200x200/a78bfa/white?text=Sun',
+  'https://placehold.co/200x200/fca5a5/white?text=Moon'
 ];
 
 const generateCards = () => {
@@ -52,13 +52,8 @@ export default function GamePage() {
   }, []);
 
   const handleCardClick = (id: number) => {
-    if (isChecking || flippedCards.length === 2) {
+    if (isChecking || flippedCards.length === 2 || (gameMode === 'single' && currentPlayer === 2)) {
       return;
-    }
-    
-    // Prevent player from clicking during bot's turn
-    if (gameMode === 'single' && currentPlayer === 2) {
-        return;
     }
 
     const card = cards.find(c => c.id === id);
@@ -144,7 +139,7 @@ export default function GamePage() {
       handleCardClick(secondCardId);
     }, 1200);
   
-  }, [cards, isChecking, handleCardClick]);
+  }, [cards, isChecking]);
 
 
   useEffect(() => {
