@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { CardType } from '@/components/memory/Card';
-import { icons } from 'lucide-react';
 
 const cardValues = [
   'Clock', 'Apple', 'Banana', 'Brain', 'Car', 'Cat', 'Dog', 'Fish', 
@@ -35,12 +34,17 @@ const generateCards = () => {
 
 export default function GamePage() {
   const [gameMode, setGameMode] = useState<'single' | 'two-player'>('single');
-  const [cards, setCards] = useState<CardType[]>(generateCards());
+  const [cards, setCards] = useState<CardType[]>([]);
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
   const [scores, setScores] = useState({ player1: 0, player2: 0 });
   const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
   const [isChecking, setIsChecking] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Generate cards on the client side to avoid hydration errors
+    setCards(generateCards());
+  }, []);
 
   const handleCardClick = (id: number) => {
     if (isChecking || flippedCards.includes(id) || cards.find(c => c.id === id)?.isMatched) {
@@ -118,14 +122,19 @@ export default function GamePage() {
 
 
   useEffect(() => {
-    checkForMatch();
-  }, [checkForMatch]);
+    if (cards.length > 0) {
+      checkForMatch();
+    }
+  }, [checkForMatch, cards.length]);
 
   useEffect(() => {
-    botTurn();
-  }, [botTurn]);
+    if (cards.length > 0) {
+      botTurn();
+    }
+  }, [botTurn, cards.length]);
 
   useEffect(() => {
+    if (cards.length === 0) return;
     const allMatched = cards.every(card => card.isMatched);
     if (allMatched && (scores.player1 + scores.player2 === cardValues.length)) {
       let winnerMessage = '';
