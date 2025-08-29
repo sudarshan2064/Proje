@@ -15,15 +15,15 @@ import { useToast } from '@/hooks/use-toast';
 import { CardType } from '@/components/memory/Card';
 
 const cardValues = [
-  'https://placehold.co/200x200/f87171/white?text=Apple',
-  'https://placehold.co/200x200/fbbf24/white?text=Banana',
-  'https://placehold.co/200x200/34d399/white?text=Grapes',
-  'https://placehold.co/200x200/60a5fa/white?text=Football',
-  'https://placehold.co/200x200/c084fc/white?text=Ball',
+  'https://placehold.co/200x200/f87171/white?text=🍎',
+  'https://placehold.co/200x200/fbbf24/white?text=🍌',
+  'https://placehold.co/200x200/34d399/white?text=🍇',
+  'https://placehold.co/200x200/60a5fa/white?text=⚽️',
+  'https://placehold.co/200x200/c084fc/white?text=🏀',
   'https://placehold.co/200x200/f472b6/white?text=Sushant',
   'https://placehold.co/200x200/818cf8/white?text=Apar',
-  'https://placehold.co/200x200/a78bfa/white?text=School',
-  'https://placehold.co/200x200/fca5a5/white?text=Moon'
+  'https://placehold.co/200x200/a78bfa/white?text=🏫',
+  'https://placehold.co/200x200/fca5a5/white?text=🌙'
 ];
 
 const generateCards = () => {
