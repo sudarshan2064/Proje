@@ -13,9 +13,10 @@ export interface CardType {
 interface CardProps {
   card: CardType;
   onClick: (id: number) => void;
+  isJustMatched: boolean;
 }
 
-const Card: React.FC<CardProps> = ({ card, onClick }) => {
+const Card: React.FC<CardProps> = ({ card, onClick, isJustMatched }) => {
   const { id, value, isFlipped, isMatched } = card;
 
   const handleClick = () => {
@@ -35,16 +36,23 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
       <div
         className={cn(
           'relative w-full h-full transition-transform duration-500 transform-style-3d shadow-lg rounded-lg',
-          isFlipped ? 'rotate-y-180' : ''
+          isFlipped ? 'rotate-y-180' : '',
+          isJustMatched && 'animate-tada'
         )}
       >
-        <div className={cn("absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center bg-card text-card-foreground")}>
+        <div
+          className={cn(
+            'absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center bg-card text-card-foreground'
+          )}
+        >
           {/* Back of the card */}
           <div className="text-4xl font-bold">?</div>
         </div>
-        <div className={cn(
-            "absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden text-5xl"
-            )}>
+        <div
+          className={cn(
+            'absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center rotate-y-180 bg-card overflow-hidden text-5xl'
+          )}
+        >
           {/* Front of the card */}
           {value}
         </div>

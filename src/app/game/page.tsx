@@ -14,17 +14,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { CardType } from '@/components/memory/Card';
 
-const cardValues = [
-  '🍎',
-  '🍌',
-  '🍇',
-  '⚽️',
-  '🏀',
-  'Sushant',
-  'Apar',
-  '🏫',
-  '🌙'
-];
+const cardValues = ['🍎', '🍌', '🍇', '⚽️', '🏀', 'Sushant', 'Apar', '🏫', '🌙'];
 
 const generateCards = () => {
   const duplicatedValues = [...cardValues, ...cardValues];
@@ -45,6 +35,7 @@ export default function GamePage() {
   const [scores, setScores] = useState({ player1: 0, player2: 0 });
   const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
   const [isChecking, setIsChecking] = useState(false);
+  const [justMatched, setJustMatched] = useState<number[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -55,10 +46,6 @@ export default function GamePage() {
     if (isChecking || flippedCards.length === 2) {
       return;
     }
-    
-    if (gameMode === 'single' && currentPlayer === 2) {
-      return;
-    }
 
     const card = cards.find(c => c.id === id);
     if (!card || card.isFlipped || card.isMatched) {
@@ -67,37 +54,40 @@ export default function GamePage() {
 
     const newFlippedCards = [...flippedCards, id];
     setCards(prevCards =>
-      prevCards.map(c =>
-        c.id === id ? { ...c, isFlipped: true } : c
-      )
+      prevCards.map(c => (c.id === id ? { ...c, isFlipped: true } : c))
     );
     setFlippedCards(newFlippedCards);
   };
-  
+
   const botTurn = useCallback(() => {
     setIsChecking(true);
-    const availableCards = cards.filter(card => !card.isMatched && !card.isFlipped);
+    const availableCards = cards.filter(
+      card => !card.isMatched && !card.isFlipped
+    );
     if (availableCards.length < 2) {
-        setIsChecking(false);
-        return;
+      setIsChecking(false);
+      return;
     }
 
     let firstPickIndex = Math.floor(Math.random() * availableCards.length);
     let secondPickIndex = Math.floor(Math.random() * availableCards.length);
 
     while (firstPickIndex === secondPickIndex) {
-        secondPickIndex = Math.floor(Math.random() * availableCards.length);
+      secondPickIndex = Math.floor(Math.random() * availableCards.length);
     }
     const firstCardId = availableCards[firstPickIndex].id;
     const secondCardId = availableCards[secondPickIndex].id;
 
     setTimeout(() => {
       setCards(prevCards =>
-        prevCards.map(c => (c.id === firstCardId || c.id === secondCardId) ? { ...c, isFlipped: true } : c)
+        prevCards.map(c =>
+          c.id === firstCardId || c.id === secondCardId
+            ? { ...c, isFlipped: true }
+            : c
+        )
       );
       setFlippedCards([firstCardId, secondCardId]);
     }, 500);
-
   }, [cards]);
 
   const checkForMatch = useCallback(() => {
@@ -109,23 +99,28 @@ export default function GamePage() {
     const secondCard = cards.find(c => c.id === secondCardId);
 
     if (firstCard && secondCard && firstCard.value === secondCard.value) {
-      setCards(prevCards =>
-        prevCards.map(card =>
-          card.id === firstCardId || card.id === secondCardId
-            ? { ...card, isMatched: true }
-            : card
-        )
-      );
-      setScores(prevScores => ({
-        ...prevScores,
-        [currentPlayer === 1 ? 'player1' : 'player2']:
-          prevScores[currentPlayer === 1 ? 'player1' : 'player2'] + 1,
-      }));
-      setFlippedCards([]);
-      setIsChecking(false);
-       if (gameMode === 'single' && currentPlayer === 2) {
-         setTimeout(botTurn, 1000);
-      }
+      setJustMatched([firstCardId, secondCardId]);
+      setTimeout(() => {
+        setCards(prevCards =>
+          prevCards.map(card =>
+            card.id === firstCardId || card.id === secondCardId
+              ? { ...card, isMatched: true }
+              : card
+          )
+        );
+        setScores(prevScores => ({
+          ...prevScores,
+          [currentPlayer === 1 ? 'player1' : 'player2']:
+            prevScores[currentPlayer === 1 ? 'player1' : 'player2'] + 1,
+        }));
+        setFlippedCards([]);
+        setIsChecking(false);
+        setJustMatched([]);
+
+        if (gameMode === 'single' && currentPlayer === 2) {
+          setTimeout(botTurn, 1000);
+        }
+      }, 1000);
     } else {
       setTimeout(() => {
         setCards(prevCards =>
@@ -141,7 +136,7 @@ export default function GamePage() {
         setIsChecking(false);
 
         if (gameMode === 'single' && nextPlayer === 2) {
-            setTimeout(botTurn, 1000);
+          setTimeout(botTurn, 1000);
         }
       }, 1000);
     }
@@ -157,12 +152,15 @@ export default function GamePage() {
     if (cards.length > 0 && cards.every(c => c.isMatched)) {
       let winnerMessage = '';
       if (gameMode === 'single') {
-        winnerMessage = scores.player1 > scores.player2 ? 'You win!' : 'Bot wins!';
+        winnerMessage =
+          scores.player1 > scores.player2 ? 'You win!' : 'Bot wins!';
       } else {
         if (scores.player1 === scores.player2) {
           winnerMessage = "It's a tie!";
         } else {
-          winnerMessage = `Player ${scores.player1 > scores.player2 ? 1 : 2} wins!`;
+          winnerMessage = `Player ${
+            scores.player1 > scores.player2 ? 1 : 2
+          } wins!`;
         }
       }
       toast({
@@ -200,8 +198,16 @@ export default function GamePage() {
         </Select>
         <Button onClick={restartGame}>Restart Game</Button>
       </div>
-      <Scoreboard scores={scores} currentPlayer={currentPlayer} gameMode={gameMode} />
-      <GameBoard cards={cards} onCardClick={handleCardClick} />
+      <Scoreboard
+        scores={scores}
+        currentPlayer={currentPlayer}
+        gameMode={gameMode}
+      />
+      <GameBoard
+        cards={cards}
+        onCardClick={handleCardClick}
+        justMatched={justMatched}
+      />
     </div>
   );
 }
