@@ -14,7 +14,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { CardType } from '@/components/memory/Card';
 
-const cardValues = ['🍎', '🍌', '🍇', '⚽️', '🏀', 'Sushant', 'Apar', '🏫', '🌙'];
+const cardValues = ['🍎', '🍌', '🍇', '⚽️', '🏀', 'Sushant', 'Apar', 'Messi', 'CR7'];
 
 const generateCards = () => {
   const duplicatedValues = [...cardValues, ...cardValues];
