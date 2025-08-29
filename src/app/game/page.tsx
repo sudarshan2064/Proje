@@ -16,7 +16,7 @@ import { CardType } from '@/components/memory/Card';
 
 const cardValues = [
   'Clock', 'Apple', 'Banana', 'Brain', 'Car', 'Cat', 'Dog', 'Fish', 
-  'Gift', 'Heart', 'Home', 'Star'
+  'Gift'
 ];
 
 const generateCards = () => {
@@ -45,8 +45,13 @@ export default function GamePage() {
   }, []);
 
   const handleCardClick = (id: number) => {
-    if (isChecking || (gameMode === 'single' && currentPlayer === 2) || flippedCards.length === 2) {
+    if (isChecking || flippedCards.length === 2) {
       return;
+    }
+    
+    // Prevent player from clicking during bot's turn
+    if (gameMode === 'single' && currentPlayer === 2) {
+        return;
     }
 
     const card = cards.find(c => c.id === id);
@@ -86,8 +91,9 @@ export default function GamePage() {
       }));
       setFlippedCards([]);
       setIsChecking(false);
-       if (gameMode === 'single' && currentPlayer === 2) {
-        setTimeout(botTurn, 1000);
+      // If it was a match, the current player (including bot) goes again
+      if (gameMode === 'single' && currentPlayer === 2) {
+         setTimeout(botTurn, 1000);
       }
     } else {
       setTimeout(() => {
@@ -102,9 +108,6 @@ export default function GamePage() {
         const nextPlayer = currentPlayer === 1 ? 2 : 1;
         setCurrentPlayer(nextPlayer);
         setIsChecking(false);
-         if (gameMode === 'single' && nextPlayer === 2) {
-           setTimeout(botTurn, 1000);
-        }
       }, 1000);
     }
   }, [flippedCards, cards, currentPlayer, gameMode]);
@@ -114,6 +117,8 @@ export default function GamePage() {
 
     const availableCards = cards.filter(card => !card.isFlipped && !card.isMatched);
     if (availableCards.length >= 2) {
+      setIsChecking(true); // Lock board for bot's turn
+
       const firstPickIndex = Math.floor(Math.random() * availableCards.length);
       let secondPickIndex = Math.floor(Math.random() * (availableCards.length - 1));
       if (secondPickIndex >= firstPickIndex) {
@@ -122,25 +127,43 @@ export default function GamePage() {
       
       const firstCardId = availableCards[firstPickIndex].id;
       const secondCardId = availableCards[secondPickIndex].id;
+      
+      // Flip first card
+      setCards(prevCards =>
+        prevCards.map(c =>
+          c.id === firstCardId ? { ...c, isFlipped: true } : c
+        )
+      );
+      setFlippedCards([firstCardId]);
 
-      handleCardClick(firstCardId);
+      // Wait a moment then flip the second card
       setTimeout(() => {
-        handleCardClick(secondCardId);
+        setCards(prevCards =>
+          prevCards.map(c =>
+            c.id === secondCardId ? { ...c, isFlipped: true } : c
+          )
+        );
+        setFlippedCards([firstCardId, secondCardId]);
+        setIsChecking(false); // Unlock for checkForMatch
       }, 700);
     }
   }, [cards, isChecking]);
+
 
   useEffect(() => {
     if (flippedCards.length === 2) {
       checkForMatch();
     }
   }, [flippedCards, checkForMatch]);
-
+  
   useEffect(() => {
     if (gameMode === 'single' && currentPlayer === 2 && !isChecking && flippedCards.length === 0) {
-      botTurn();
+        const allMatched = cards.length > 0 && cards.every(c => c.isMatched);
+        if (!allMatched) {
+            setTimeout(botTurn, 1000);
+        }
     }
-  }, [currentPlayer, gameMode, isChecking, botTurn, flippedCards.length]);
+  }, [currentPlayer, gameMode, isChecking, botTurn, cards, flippedCards.length]);
 
   useEffect(() => {
     if (cards.length > 0 && cards.every(c => c.isMatched)) {
@@ -194,3 +217,5 @@ export default function GamePage() {
     </div>
   );
 }
+
+    
