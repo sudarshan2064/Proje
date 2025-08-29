@@ -30,7 +30,7 @@ const Card: React.FC<CardProps> = ({ card, onClick }) => {
   return (
     <div
       className={cn(
-        'w-20 h-28 rounded-lg cursor-pointer perspective-1000'
+        'w-24 h-32 rounded-lg cursor-pointer perspective-1000'
       )}
       onClick={handleClick}
     >
@@ -57,7 +57,7 @@ export const MemoizedCard = React.memo(Card);
 
 export const CardSkeleton = () => {
     return (
-        <div className="w-20 h-28 rounded-lg bg-gray-300 dark:bg-gray-700 animate-pulse" />
+        <div className="w-24 h-32 rounded-lg bg-gray-300 dark:bg-gray-700 animate-pulse" />
     )
 }
 

@@ -19,7 +19,6 @@ const cardValues = [
   'Gift', 'Heart', 'Home', 'Star'
 ];
 
-
 const generateCards = () => {
   const duplicatedValues = [...cardValues, ...cardValues];
   return duplicatedValues
@@ -52,12 +51,17 @@ export default function GamePage() {
     }
 
     const newFlippedCards = [...flippedCards, id];
-    setFlippedCards(newFlippedCards);
     setCards(prevCards =>
       prevCards.map(card =>
         card.id === id ? { ...card, isFlipped: true } : card
       )
     );
+    
+    if (newFlippedCards.length === 2) {
+      setFlippedCards(newFlippedCards);
+    } else {
+        setFlippedCards(newFlippedCards);
+    }
   };
 
   const checkForMatch = useCallback(() => {
@@ -93,26 +97,29 @@ export default function GamePage() {
           );
           setFlippedCards([]);
           setIsChecking(false);
-          setCurrentPlayer(prev => (prev === 1 ? 2 : 1));
+          if (gameMode !== 'two-player' || currentPlayer !== 0) {
+            setCurrentPlayer(prev => (prev === 1 ? 2 : 1));
+          }
         }, 1000);
       }
     }
-  }, [flippedCards, cards, currentPlayer]);
+  }, [flippedCards, cards, currentPlayer, gameMode]);
 
   const botTurn = useCallback(() => {
     if (gameMode === 'single' && currentPlayer === 2 && !isChecking) {
+       setIsChecking(true); // Prevent player from clicking during bot's turn
       setTimeout(() => {
         const availableCards = cards.filter(card => !card.isFlipped && !card.isMatched);
         if (availableCards.length >= 2) {
           const firstPickIndex = Math.floor(Math.random() * availableCards.length);
-          const firstCardId = availableCards[firstPickIndex].id;
-          
-          let secondPickIndex = Math.floor(Math.random() * availableCards.length);
-          while(secondPickIndex === firstPickIndex) {
-             secondPickIndex = Math.floor(Math.random() * availableCards.length);
+          let secondPickIndex = Math.floor(Math.random() * (availableCards.length - 1));
+          if (secondPickIndex >= firstPickIndex) {
+            secondPickIndex++;
           }
+          
+          const firstCardId = availableCards[firstPickIndex].id;
           const secondCardId = availableCards[secondPickIndex].id;
-
+          
           handleCardClick(firstCardId);
           setTimeout(() => handleCardClick(secondCardId), 500);
         }
@@ -122,35 +129,37 @@ export default function GamePage() {
 
 
   useEffect(() => {
-    if (cards.length > 0) {
+    if (flippedCards.length === 2 && !isChecking) {
       checkForMatch();
     }
-  }, [checkForMatch, cards.length]);
+  }, [flippedCards, checkForMatch, isChecking]);
 
   useEffect(() => {
-    if (cards.length > 0) {
-      botTurn();
-    }
-  }, [botTurn, cards.length]);
+     if (gameMode === 'single' && currentPlayer === 2 && !isChecking) {
+        botTurn();
+     }
+  }, [currentPlayer, gameMode, isChecking, botTurn]);
+
 
   useEffect(() => {
-    if (cards.length === 0) return;
-    const allMatched = cards.every(card => card.isMatched);
-    if (allMatched && (scores.player1 + scores.player2 === cardValues.length)) {
-      let winnerMessage = '';
-      if (gameMode === 'single') {
-        winnerMessage = scores.player1 > scores.player2 ? 'You win!' : 'Bot wins!';
-      } else {
-        if (scores.player1 === scores.player2) {
-          winnerMessage = "It's a tie!";
-        } else {
-          winnerMessage = `Player ${scores.player1 > scores.player2 ? 1 : 2} wins!`;
+    if (cards.length === 0 || cards.every(c => c.isMatched)) {
+       const allMatched = cards.every(card => card.isMatched);
+        if (allMatched && (scores.player1 + scores.player2 === cardValues.length)) {
+          let winnerMessage = '';
+          if (gameMode === 'single') {
+            winnerMessage = scores.player1 > scores.player2 ? 'You win!' : 'Bot wins!';
+          } else {
+            if (scores.player1 === scores.player2) {
+              winnerMessage = "It's a tie!";
+            } else {
+              winnerMessage = `Player ${scores.player1 > scores.player2 ? 1 : 2} wins!`;
+            }
+          }
+          toast({
+            title: 'Game Over!',
+            description: winnerMessage,
+          });
         }
-      }
-      toast({
-        title: 'Game Over!',
-        description: winnerMessage,
-      });
     }
   }, [cards, scores, gameMode, toast]);
 
